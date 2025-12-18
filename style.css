@@ -182,3 +182,36 @@ canvas { position: absolute; top: 0; left: 0; z-index: 1; }
 @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
 @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
 @media (max-width: 768px) { h1 { font-size: 2.5rem; } .btn { font-size: 1.2rem; padding: 12px 30px; } }
+
+/* Tambahkan di bagian BUTTONS atau paling bawah */
+
+.btn-confirm {
+    background: rgba(0, 255, 85, 0.2);
+    border-color: var(--good);
+    color: var(--good);
+}
+.btn-confirm:hover {
+    background: var(--good);
+    color: black;
+    box-shadow: 0 0 20px var(--good);
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid #666;
+    color: #aaa;
+}
+.btn-cancel:hover {
+    border-color: white;
+    color: white;
+}
+
+.btn-danger {
+    border-color: var(--secondary);
+    color: var(--secondary);
+}
+.btn-danger:hover {
+    background: var(--secondary);
+    color: white;
+    box-shadow: 0 0 20px var(--secondary);
+}

@@ -58,11 +58,16 @@ function loadData() {
 }
 function saveData() { localStorage.setItem(DB_KEY, JSON.stringify(leaderboardData)); }
 function resetData() {
-    if(confirm("Hapus leaderboard?")) {
-        leaderboardData = { time_trial: [], geometry_run: [] };
-        saveData();
-        showMainMenu();
-    }
+    showCustomConfirm(
+        "Reset Data",
+        "Apakah Anda yakin ingin menghapus semua data leaderboard?",
+        () => {
+            leaderboardData = { time_trial: [], geometry_run: [] };
+            saveData();
+            showMainMenu();
+            showCustomAlert("Sukses", "Data leaderboard berhasil dihapus.");
+        }
+    );
 }
 function exportData() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(leaderboardData));
@@ -83,9 +88,11 @@ function importData() {
             try {
                 leaderboardData = JSON.parse(re.target.result);
                 saveData();
-                alert("Berhasil import!");
+                showCustomAlert("Berhasil", "Data berhasil di-import!");
                 updateSettingsUI();
-            } catch (err) { alert("File error."); }
+            } catch (err) { 
+                showCustomAlert("Error", "Format file tidak valid."); 
+            }
         }
         reader.readAsText(file);
     }
@@ -167,13 +174,17 @@ function clearScreenEffect() {
 
 function startGame() {
     const nameInput = document.getElementById('player-name').value.trim();
-    if(!nameInput) { alert("Masukkan nama!"); return; }
+    if(!nameInput) { 
+        showCustomAlert("Peringatan", "Mohon masukkan nama pemain!"); 
+        return; 
+    }
     config.playerName = nameInput;
 
     closeNameModal();
     showScreen('game-layer');
     document.getElementById('game-layer').classList.remove('hidden');
 
+    // ... (SISA KODE STARTGAME SAMA SEPERTI SEBELUMNYA) ...
     // Reset Vars
     score = 0; lives = 3; shapes = []; particles = []; mousePath = [];
     shapesDestroyed = 0; timeElapsed = 0; gameState = 'playing';
@@ -199,14 +210,28 @@ function startGame() {
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
 }
-
 // FEATURE 1: ABORT GAME
 function abortGame() {
-    if(confirm("Yakin ingin keluar? Skor tidak akan disimpan.")) {
-        gameState = 'menu';
-        clearScreenEffect();
-        showMainMenu();
-    }
+    // PAUSE GAME LOGIC SEMENTARA (Opsional, tapi disarankan)
+    // Karena modal custom tidak menghentikan loop game secara otomatis seperti alert bawaan
+    const prevSpeed = globalSpeed;
+    globalSpeed = 0; 
+
+    showCustomConfirm(
+        "Keluar Permainan?", 
+        "Yakin ingin keluar? Skor tidak akan disimpan.", 
+        () => {
+            // Aksi YA
+            gameState = 'menu';
+            clearScreenEffect();
+            showMainMenu();
+            globalSpeed = 1.0; // Reset speed
+        },
+        () => {
+            // Aksi BATAL
+            globalSpeed = prevSpeed; // Resume speed
+        }
+    );
 }
 
 function gameLoop(timestamp) {
@@ -389,6 +414,67 @@ function endGame() {
     const newEntry = { name: config.playerName, score: score, timeElapsed: timeElapsed, date: new Date().toISOString() };
     leaderboardData[gameMode].push(newEntry);
     saveData();
+}
+
+// --- SISTEM MODAL CUSTOM ---
+
+function showCustomAlert(title, message, callback = null) {
+    const modal = document.getElementById('modal-dialog');
+    const titleEl = document.getElementById('dialog-title');
+    const msgEl = document.getElementById('dialog-msg');
+    const actionsEl = document.getElementById('dialog-actions');
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    
+    // Setup Tombol OK
+    actionsEl.innerHTML = '';
+    const btnOk = document.createElement('button');
+    btnOk.className = 'btn btn-small';
+    btnOk.innerText = 'OK';
+    btnOk.onclick = () => {
+        modal.classList.add('hidden');
+        if(callback) callback();
+    };
+    actionsEl.appendChild(btnOk);
+
+    modal.classList.remove('hidden');
+}
+
+function showCustomConfirm(title, message, onYes, onNo = null) {
+    const modal = document.getElementById('modal-dialog');
+    const titleEl = document.getElementById('dialog-title');
+    const msgEl = document.getElementById('dialog-msg');
+    const actionsEl = document.getElementById('dialog-actions');
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+
+    // Bersihkan tombol lama
+    actionsEl.innerHTML = '';
+
+    // Tombol YA
+    const btnYes = document.createElement('button');
+    btnYes.className = 'btn btn-small btn-danger'; // Merah karena biasanya confirm untuk aksi destruktif/keluar
+    btnYes.innerText = 'YA';
+    btnYes.onclick = () => {
+        modal.classList.add('hidden');
+        if(onYes) onYes();
+    };
+
+    // Tombol TIDAK
+    const btnNo = document.createElement('button');
+    btnNo.className = 'btn btn-small btn-cancel';
+    btnNo.innerText = 'BATAL';
+    btnNo.onclick = () => {
+        modal.classList.add('hidden');
+        if(onNo) onNo();
+    };
+
+    actionsEl.appendChild(btnYes);
+    actionsEl.appendChild(btnNo);
+
+    modal.classList.remove('hidden');
 }
 
 function goToMenu() { showMainMenu(); }

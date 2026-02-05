@@ -2,9 +2,13 @@
 const config = {
     difficulty: 2,
     timerDuration: 5,
-    targetShapes: 10,
+    targetShapes: 50, // DEFAULT BARU (sesuai range min)
     playerName: "Player"
 };
+
+// New Logic Variables
+let fastModeTimer = 0; // Untuk Evil Spike
+let blurTimer = 0;     // Untuk Splash
 
 // --- STATE VARIABLES ---
 let gameState = 'title';
@@ -184,7 +188,6 @@ function startGame() {
     showScreen('game-layer');
     document.getElementById('game-layer').classList.remove('hidden');
 
-    // ... (SISA KODE STARTGAME SAMA SEPERTI SEBELUMNYA) ...
     // Reset Vars
     score = 0; lives = 3; shapes = []; particles = []; mousePath = [];
     shapesDestroyed = 0; timeElapsed = 0; gameState = 'playing';
@@ -192,6 +195,11 @@ function startGame() {
     // Effect Reset
     scoreMultiplier = 1; multiplierTimer = 0; globalSpeed = 1.0;
     slowMoTimer = 0; immunityTimer = 0; fxTimer = 0;
+    
+    // NEW EFFECT RESET
+    fastModeTimer = 0; 
+    blurTimer = 0;
+    document.body.classList.remove('blur-effect');
     
     // Boss Reset
     bossSpawned = false; bossActive = false;
@@ -253,10 +261,26 @@ function gameLoop(timestamp) {
     }
 
     if (multiplierTimer > 0) { multiplierTimer -= dtSeconds; if(multiplierTimer <= 0) scoreMultiplier = 1; }
-    if (slowMoTimer > 0) { slowMoTimer -= dtSeconds; globalSpeed = 0.3; } else { globalSpeed = 1.0; }
+    
+    // LOGIKA SPEED (Slow Mo vs Evil Spike)
+    if (slowMoTimer > 0) { 
+        slowMoTimer -= dtSeconds; 
+        globalSpeed = 0.3; 
+    } else if (fastModeTimer > 0) {
+        fastModeTimer -= dtSeconds;
+        globalSpeed = 2.5; // SANGAT CEPAT
+    } else { 
+        globalSpeed = 1.0; 
+    }
+
     if (immunityTimer > 0) immunityTimer -= dtSeconds;
     
-    // Handle FX Flash Duration
+    // LOGIKA BLUR
+    if (blurTimer > 0) {
+        blurTimer -= dtSeconds;
+        if (blurTimer <= 0) document.body.classList.remove('blur-effect');
+    }
+
     if (fxTimer > 0) {
         fxTimer -= dtSeconds;
         if(fxTimer <= 0) clearScreenEffect();
@@ -264,9 +288,11 @@ function gameLoop(timestamp) {
 
     // 2. SPAWN LOGIC
     let currentSpawnRate = (2000 - (config.difficulty * 300));
-    if (globalSpeed < 1.0) currentSpawnRate = 300; 
+    // Jika Fast Mode, spawn juga makin cepat
+    if (globalSpeed > 1.5) currentSpawnRate = 200; 
+    else if (globalSpeed < 1.0) currentSpawnRate = 300; 
 
-    // LOGIKA GEOMETRY RUN BOSS
+    // LOGIKA BOSS & SPAWN (Sama seperti sebelumnya)
     if (gameMode === 'geometry_run' && shapesDestroyed >= config.targetShapes) {
         if (!bossSpawned) {
             document.getElementById('boss-warning').style.display = 'block';
@@ -279,7 +305,7 @@ function gameLoop(timestamp) {
     } else {
         spawnTimer -= rawDt;
         if(spawnTimer <= 0) {
-            shapes.push(new Shape());
+            shapes.push(new Shape()); // Type otomatis random dari constructor
             spawnTimer = currentSpawnRate;
         }
     }
@@ -290,9 +316,9 @@ function gameLoop(timestamp) {
         shapes[i].draw(ctx);
         
         if (shapes[i].type === 'boss' && !shapes[i].active) {
-                shapes[i].active = true;
-                shapes[i].y = canvas.height;
-                shapes[i].vy = -18; 
+             shapes[i].active = true;
+             shapes[i].y = canvas.height;
+             shapes[i].vy = -18; 
         }
         
         if (!shapes[i].active) shapes.splice(i, 1);
@@ -301,7 +327,11 @@ function gameLoop(timestamp) {
     // Trail
     if (mousePath.length > 1) {
         ctx.beginPath();
-        ctx.strokeStyle = immunityTimer > 0 ? '#ffff00' : 'white';
+        // Warna trail berubah jika ada efek khusus
+        if (fastModeTimer > 0) ctx.strokeStyle = 'red';
+        else if (immunityTimer > 0) ctx.strokeStyle = 'yellow';
+        else ctx.strokeStyle = 'white';
+        
         ctx.lineWidth = 5; ctx.lineCap = 'round';
         ctx.shadowBlur = 20; ctx.shadowColor = '#00ffcc';
         ctx.moveTo(mousePath[0].x, mousePath[0].y);
@@ -309,7 +339,7 @@ function gameLoop(timestamp) {
         ctx.stroke();
         if(mousePath.length > 10) mousePath.shift();
     }
-
+    
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update(); particles[i].draw(ctx);
         if (particles[i].life <= 0) particles.splice(i, 1);
@@ -319,47 +349,58 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
 }
 
+const gameContext = {
+    get score() { return score; },
+    set score(val) { score = val; },
+    get lives() { return lives; },
+    set lives(val) { lives = val; },
+    get scoreMultiplier() { return scoreMultiplier; },
+    set scoreMultiplier(val) { scoreMultiplier = val; },
+    get maxLives() { return maxLives; },
+    get immunityTimer() { return immunityTimer; },
+    set immunityTimer(val) { immunityTimer = val; },
+    get multiplierTimer() { return multiplierTimer; },
+    set multiplierTimer(val) { multiplierTimer = val; },
+    get slowMoTimer() { return slowMoTimer; },
+    set slowMoTimer(val) { slowMoTimer = val; },
+    get fastModeTimer() { return fastModeTimer; },
+    set fastModeTimer(val) { fastModeTimer = val; },
+    get blurTimer() { return blurTimer; },
+    set blurTimer(val) { blurTimer = val; },
+    
+    // Vars temp
+    shapesDestroyed: 0,
+    lastSlashX: 0,
+    lastSlashY: 0,
+
+    addScore: addScore,
+    triggerScreenEffect: triggerScreenEffect,
+    createExplosion: createExplosion,
+    endGame: (win) => { 
+        // Logic win custom jika perlu
+        endGame(); 
+    }
+};
+
 function handleSlash(x, y) {
     for (let i = shapes.length - 1; i >= 0; i--) {
         if(shapes[i].checkHit(x, y)) {
             const s = shapes[i];
+            
+            // Update context coords untuk explosion
+            gameContext.lastSlashX = s.x;
+            gameContext.lastSlashY = s.y;
+            gameContext.shapesDestroyed = shapesDestroyed; // Sync
+
             createExplosion(s.x, s.y, s.color);
             
-            if (s.type === 'boss') {
-                addScore(1000);
-                shapes.splice(i, 1);
-                endGame(); 
-                return;
+            // EXECUTE EFFECT FROM CONFIG
+            if (s.config && s.config.effect) {
+                s.config.effect(gameContext, s);
             }
 
-            switch(s.type) {
-                case 'normal':
-                    addScore(10); shapesDestroyed++;
-                    break;
-                case 'bomb':
-                    if (immunityTimer <= 0) {
-                        lives--; createExplosion(s.x, s.y, 'red');
-                        triggerScreenEffect('red'); 
-                    }
-                    break;
-                case 'score_up':
-                    addScore(50);
-                    triggerScreenEffect('#00ff55'); 
-                    break;
-                case 'multiplier':
-                    scoreMultiplier = s.multVal; multiplierTimer = 10;
-                    triggerScreenEffect('#ffaa00'); 
-                    break;
-                case 'slow_mo':
-                    slowMoTimer = 5;
-                    triggerScreenEffect('#00ccff'); 
-                    break;
-                case 'life':
-                    triggerScreenEffect('#ff0055'); 
-                    if (lives < maxLives) lives++;
-                    else immunityTimer = 10;
-                    break;
-            }
+            // Sync balik shapesDestroyed (karena primitif)
+            shapesDestroyed = gameContext.shapesDestroyed;
 
             if(s.type !== 'boss') shapes.splice(i, 1);
             if (lives <= 0) endGame();
@@ -389,6 +430,11 @@ function updateHUD() {
     if (immunityTimer > 0) buffsHtml += `<div class="buff-badge" style="color:yellow; border-color:yellow;">🛡️ Kebal (${Math.ceil(immunityTimer)}s)</div>`;
     if (multiplierTimer > 0) buffsHtml += `<div class="buff-badge" style="color:orange; border-color:orange;">⚡ x${scoreMultiplier} (${Math.ceil(multiplierTimer)}s)</div>`;
     if (slowMoTimer > 0) buffsHtml += `<div class="buff-badge" style="color:#0cf; border-color:#0cf;">❄️ Slow (${Math.ceil(slowMoTimer)}s)</div>`;
+    
+    // NEW BUFFS HUD
+    if (fastModeTimer > 0) buffsHtml += `<div class="buff-badge" style="color:red; border-color:red;">😈 SPEED (${Math.ceil(fastModeTimer)}s)</div>`;
+    if (blurTimer > 0) buffsHtml += `<div class="buff-badge" style="color:gray; border-color:white;">🌫️ BLUR (${Math.ceil(blurTimer)}s)</div>`;
+    
     document.getElementById('hud-active-buffs').innerHTML = buffsHtml;
 }
 

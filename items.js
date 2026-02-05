@@ -34,6 +34,9 @@ const ItemConfig = {
                 game.lives--; 
                 game.createExplosion(s.x, s.y, 'red');
                 game.triggerScreenEffect('red');
+                game.showToast('damage', 'TERKENA BOM!', 'debuff'); // Instan
+            } else {
+                game.showToast('block', 'BLOCKED!', 'buff');
             }
         }
     },
@@ -50,6 +53,7 @@ const ItemConfig = {
         effect: (game) => {
             game.addScore(50);
             game.triggerScreenEffect('#00ff55');
+            game.showToast('score', '+50 POINT', 'buff'); // Instan
         }
     },
     'multiplier': {
@@ -65,6 +69,8 @@ const ItemConfig = {
             game.scoreMultiplier = s.multVal || 2; 
             game.multiplierTimer = 10;
             game.triggerScreenEffect('#ffaa00');
+            // DURASI 10 DETIK
+            game.showToast('mult', `MULTIPLIER x${game.scoreMultiplier}`, 'buff', 10);
         }
     },
     'slow_mo': {
@@ -79,6 +85,8 @@ const ItemConfig = {
         effect: (game) => {
             game.slowMoTimer = 5;
             game.triggerScreenEffect('#00ccff');
+            // DURASI 5 DETIK
+            game.showToast('slow', 'SLOW MOTION', 'info', 5);
         }
     },
     'life': {
@@ -90,8 +98,13 @@ const ItemConfig = {
             ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("❤️", 0, 0);
         },
         effect: (game) => {
-            if (game.lives < game.maxLives) game.lives++;
-            else game.immunityTimer = 10;
+            if (game.lives < game.maxLives) {
+                game.lives++;
+                game.showToast('life', 'EXTRA LIFE', 'buff');
+            } else {
+                game.immunityTimer = 10;
+                game.showToast('shield', 'MAX HP: SHIELD', 'buff', 10);
+            }
             game.triggerScreenEffect('#ff0055');
         }
     },
@@ -106,6 +119,7 @@ const ItemConfig = {
         effect: (game) => {
             game.addScore(100);
             game.triggerScreenEffect('rgba(255, 215, 0, 0.5)');
+            game.showToast('gold', 'JACKPOT! +100', 'buff');
         }
     },
     'black_ball': {
@@ -120,6 +134,7 @@ const ItemConfig = {
         effect: (game) => {
             game.addScore(-100);
             game.triggerScreenEffect('rgba(0, 0, 0, 0.8)');
+            game.showToast('black', '-100 POINT', 'debuff');
         }
     },
     'minus_shape': {
@@ -133,6 +148,7 @@ const ItemConfig = {
         effect: (game) => {
             game.addScore(-150);
             game.triggerScreenEffect('rgba(255, 0, 0, 0.5)');
+            game.showToast('minus', '-150 POINT', 'debuff');
         }
     },
     'combo_lock': {
@@ -150,6 +166,7 @@ const ItemConfig = {
             game.multiplierTimer = 10;
             if(game.scoreMultiplier === 1) game.scoreMultiplier = 2;
             game.triggerScreenEffect('#ff00ff');
+            game.showToast('combo', 'COMBO LOCK', 'buff', 10);
         }
     },
     'evil_spike': {
@@ -175,6 +192,7 @@ const ItemConfig = {
         effect: (game) => {
             game.fastModeTimer = 10;
             game.triggerScreenEffect('red');
+            game.showToast('speed', 'SPEED UP!', 'debuff', 10);
         }
     },
     'splash_blur': {
@@ -192,6 +210,7 @@ const ItemConfig = {
         effect: (game) => {
             game.blurTimer = 10;
             document.body.classList.add('blur-effect');
+            game.showToast('blur', 'VISION BLUR', 'debuff', 10);
         }
     },
     'math_op': {
@@ -209,9 +228,11 @@ const ItemConfig = {
             if (s.op === 'mul') {
                 game.score *= 2;
                 game.triggerScreenEffect('#00ff00');
+                game.showToast('math_good', 'TOTAL SCORE x2', 'buff');
             } else {
                 game.score = Math.floor(game.score / 2);
                 game.triggerScreenEffect('#ff0000');
+                game.showToast('math_bad', 'TOTAL SCORE /2', 'debuff');
             }
         }
     },
@@ -225,11 +246,13 @@ const ItemConfig = {
             ctx.beginPath(); ctx.arc(0,0, s.size/2 - 5, 0, Math.PI*2); ctx.stroke();
             ctx.shadowBlur = 0;
         },
+        // ...
         effect: (game) => {
             game.fastModeTimer = 0;
             game.blurTimer = 0;
             document.body.classList.remove('blur-effect');
             game.triggerScreenEffect('#ffffff');
+            game.showToast('cleanse', 'DEBUFF REMOVED', 'buff');
         }
     },
     'purge_lightning': {
@@ -249,6 +272,7 @@ const ItemConfig = {
             game.immunityTimer = 0;
             game.slowMoTimer = 0;
             game.triggerScreenEffect('#4b0082');
+            game.showToast('purge', 'BUFFS PURGED', 'debuff');
         }
     },
     'boss': {
@@ -278,6 +302,7 @@ const ItemConfig = {
         },
         effect: (game) => {
             game.addScore(1000);
+            game.showToast('boss', 'BOSS DEFEATED!', 'buff');
             game.endGame(true);
         }
     }

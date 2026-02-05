@@ -7,6 +7,7 @@ const config = {
     bgMenu: "bg-default", // Default Baru
     bgGame: "bg-grid"     // Default Baru
 };
+const activeToasts = {};
 
 // New Logic Variables
 let fastModeTimer = 0; // Untuk Evil Spike
@@ -122,6 +123,63 @@ function showMainMenu() {
     applyBackground();
 }
 
+function showGameToast(id, label, type, durationSeconds = 0) {
+    const container = document.getElementById('toast-container');
+    
+    // 1. Jika toast dengan ID ini sudah ada (misal ambil item yang sama), hapus dulu biar reset
+    if (activeToasts[id]) {
+        const existing = document.getElementById(activeToasts[id]);
+        if (existing) existing.remove();
+        clearTimeout(activeToasts[id + '_timeout']);
+    }
+
+    // 2. Buat Elemen Toast Baru
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+    toast.id = `toast-${id}-${Date.now()}`; // ID unik DOM
+    
+    // Simpan referensi ID DOM ke map activeToasts
+    activeToasts[id] = toast.id;
+
+    // Struktur HTML Toast
+    // Jika ada durasi, kita pakai progress bar. Jika tidak, class blink.
+    const blinkClass = durationSeconds > 0 ? '' : 'blink-anim';
+    
+    let html = `<span class="toast-label ${blinkClass}">${label}</span>`;
+    if (durationSeconds > 0) {
+        html += `<div class="toast-progress" style="transition: width ${durationSeconds}s linear; width: 100%;"></div>`;
+    }
+    toast.innerHTML = html;
+    
+    container.appendChild(toast);
+
+    // 3. Trigger Animasi Progress Bar
+    if (durationSeconds > 0) {
+        // Force reflow agar transisi CSS jalan (trik browser)
+        toast.offsetHeight; 
+        
+        // Set width ke 0 agar menyusut sesuai durasi transition CSS
+        const bar = toast.querySelector('.toast-progress');
+        if(bar) bar.style.width = '0%';
+        
+        // Hapus toast setelah durasi habis
+        const timeout = setTimeout(() => {
+            if(toast.parentNode) toast.remove();
+            delete activeToasts[id];
+        }, durationSeconds * 1000);
+        
+        activeToasts[id + '_timeout'] = timeout;
+    } else {
+        // Logic Item Instan (Blinking 2 detik)
+        const timeout = setTimeout(() => {
+            if(toast.parentNode) toast.remove();
+            delete activeToasts[id];
+        }, 2000);
+        
+        activeToasts[id + '_timeout'] = timeout;
+    }
+}
+
 function toggleSettings() {
     document.getElementById('modal-settings').classList.toggle('hidden');
     updateSettingsUI();
@@ -210,6 +268,10 @@ function startGame() {
     document.body.classList.remove('blur-effect');
     bossSpawned = false; bossActive = false;
     document.getElementById('boss-warning').style.display = 'none';
+
+    // Clear Toasts
+    document.getElementById('toast-container').innerHTML = '';
+    for (let key in activeToasts) delete activeToasts[key];
     
     if(gameMode === 'time_trial') {
         timeRemaining = config.timerDuration * 60;
@@ -371,7 +433,6 @@ const gameContext = {
     get blurTimer() { return blurTimer; },
     set blurTimer(val) { blurTimer = val; },
     
-    // Vars temp
     shapesDestroyed: 0,
     lastSlashX: 0,
     lastSlashY: 0,
@@ -379,10 +440,9 @@ const gameContext = {
     addScore: addScore,
     triggerScreenEffect: triggerScreenEffect,
     createExplosion: createExplosion,
-    endGame: (win) => { 
-        // Logic win custom jika perlu
-        endGame(); 
-    }
+    endGame: (win) => { endGame(); },
+    
+    showToast: showGameToast 
 };
 
 function handleSlash(x, y) {

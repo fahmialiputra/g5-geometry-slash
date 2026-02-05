@@ -257,3 +257,72 @@ canvas { position: absolute; top: 0; left: 0; z-index: 1; }
     filter: blur(5px);
 }
 */
+/* TOAST NOTIFICATION SYSTEM */
+#toast-container {
+    position: absolute;
+    bottom: 25%; /* Posisi agak ke bawah tengah */
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse; /* Item baru muncul di paling bawah (jika numpuk) */
+    gap: 5px;
+    z-index: 40;
+    pointer-events: none;
+    width: 220px;
+}
+
+.toast-item {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid white;
+    border-radius: 4px;
+    padding: 5px 10px;
+    position: relative;
+    overflow: hidden;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideUp 0.3s ease-out;
+}
+
+.toast-label { z-index: 2; position: relative; }
+
+/* Progress Bar Latar Belakang */
+.toast-progress {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.3); /* Transparan */
+    z-index: 1;
+    transform-origin: left;
+    /* Transisi akan di-set via JS sesuai durasi item */
+    transition-timing-function: linear; 
+}
+
+/* Modifier Warna Toast berdasarkan tipe */
+.toast-buff { border-color: #00ff55; color: #00ff55; }
+.toast-buff .toast-progress { background: rgba(0, 255, 85, 0.4); }
+
+.toast-debuff { border-color: #ff0055; color: #ff0055; }
+.toast-debuff .toast-progress { background: rgba(255, 0, 85, 0.4); }
+
+.toast-info { border-color: #00ccff; color: #00ccff; }
+
+/* Animasi Blinking untuk item instan */
+.blink-anim {
+    animation: blinkToast 0.5s infinite alternate;
+}
+
+@keyframes blinkToast {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0.7; transform: scale(0.98); }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}

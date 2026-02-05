@@ -2,7 +2,7 @@ class Shape {
     constructor(forceType = null) {
         const canvas = document.getElementById('gameCanvas');
         
-        this.size = Math.random() * 30 + 40; // Sedikit lebih besar agar icon terlihat
+        this.size = Math.random() * 30 + 40; 
         this.x = Math.random() * (canvas.width - 100) + 50;
         this.y = canvas.height + this.size;
         
@@ -19,17 +19,14 @@ class Shape {
 
         if (forceType) {
             this.type = forceType;
-            // Setup khusus Boss
             if(this.type === 'boss') this.setupBoss();
         } else {
-            // Gunakan helper dari items.js
-            this.type = getRandomItemType(gameMode);
+            this.type = getRandomItemType();
         }
 
-        // Ambil config dari items.js
         this.config = ItemConfig[this.type];
         
-        // Resolve warna (bisa string atau function)
+        // Resolve warna
         if (typeof this.config.color === 'function') {
             this.color = this.config.color(this);
         } else {
@@ -47,7 +44,6 @@ class Shape {
     }
 
     update(dt) {
-        // Mengakses globalSpeed (akan diupdate di script.js utk handle Fast Mode)
         const speed = (typeof globalSpeed !== 'undefined') ? globalSpeed : 1.0;
         const canvas = document.getElementById('gameCanvas');
 
@@ -64,43 +60,44 @@ class Shape {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
         
+        // --- LOGIKA ASSET IMAGE ---
+        // Cek apakah item ini punya gambar, gambarnya selesai dimuat, dan bukan broken link
+        let useImage = false;
+        if (this.config.imgObj && this.config.imgObj.complete && this.config.imgObj.naturalWidth > 0) {
+            useImage = true;
+        }
+
+        if (useImage) {
+            // Render Image
+            // Kita gambar centered di 0,0
+            try {
+                ctx.drawImage(this.config.imgObj, -this.size/2, -this.size/2, this.size, this.size);
+            } catch(e) {
+                // Fallback jika error render
+                this.drawFallback(ctx);
+            }
+        } else {
+            // Render Geometri (Fallback / Placeholder)
+            this.drawFallback(ctx);
+        }
+
+        ctx.restore();
+    }
+
+    drawFallback(ctx) {
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#fff';
         ctx.shadowBlur = 10;
         ctx.shadowColor = this.color;
         ctx.fillStyle = this.color;
 
-        // Custom Draw dari ItemConfig
-        if (this.type === 'boss') {
-            // Gambar manual boss (Prism)
-             const spikes = 5;
-             const outerRadius = this.size / 2;
-             const innerRadius = this.size / 4;
-             let rot = Math.PI / 2 * 3;
-             let step = Math.PI / spikes;
-             ctx.beginPath();
-             ctx.moveTo(0, 0 - outerRadius);
-             for (let i = 0; i < spikes; i++) {
-                 ctx.lineTo(Math.cos(rot) * outerRadius, Math.sin(rot) * outerRadius);
-                 rot += step;
-                 ctx.lineTo(Math.cos(rot) * innerRadius, Math.sin(rot) * innerRadius);
-                 rot += step;
-             }
-             ctx.lineTo(0, 0 - outerRadius);
-             ctx.closePath();
-             ctx.fillStyle = ctx.createRadialGradient(0,0,5, 0,0,this.size);
-             ctx.fillStyle.addColorStop(0, "white");
-             ctx.fillStyle.addColorStop(1, "gold");
-             ctx.fill(); ctx.stroke();
-        } else if (this.config && this.config.draw) {
-            ctx.beginPath(); // Penting untuk isolasi path
+        if (this.config && this.config.draw) {
+            ctx.beginPath();
             this.config.draw(ctx, this);
-            // ctx.fill/stroke dipanggil di dalam config.draw jika perlu spesifik,
-            // tapi kita sediakan default fill/stroke jika config.draw hanya bikin path
-            // (namun di items.js kita sudah melakukan fill/stroke sendiri)
+            // Config draw bertanggung jawab untuk fill/stroke jika bentuknya kompleks
+            // Tapi untuk amannya kita bisa panggil stroke jika path tertutup
+            // (Sebagian besar config.draw di items.js sudah melakukan fill/stroke sendiri)
         }
-
-        ctx.restore();
     }
 
     checkHit(x, y) {

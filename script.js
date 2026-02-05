@@ -2,8 +2,10 @@
 const config = {
     difficulty: 2,
     timerDuration: 5,
-    targetShapes: 50, // DEFAULT BARU (sesuai range min)
-    playerName: "Player"
+    targetShapes: 50,
+    playerName: "Player",
+    bgMenu: "bg-default", // Default Baru
+    bgGame: "bg-grid"     // Default Baru
 };
 
 // New Logic Variables
@@ -117,6 +119,7 @@ function showMainMenu() {
     showScreen('screen-menu');
     showLeaderboard('time_trial');
     clearScreenEffect();
+    applyBackground();
 }
 
 function toggleSettings() {
@@ -131,6 +134,19 @@ function updateSettingsUI() {
     config.difficulty = parseInt(document.getElementById('cfg-difficulty').value);
     config.timerDuration = parseInt(document.getElementById('cfg-timer').value);
     config.targetShapes = parseInt(document.getElementById('cfg-shape').value);
+    config.bgMenu = document.getElementById('cfg-bg-menu').value;
+    config.bgGame = document.getElementById('cfg-bg-game').value;
+    applyBackground();
+}
+
+function applyBackground() {
+    const body = document.body;
+    body.classList.remove('bg-default', 'bg-grid', 'bg-space', 'bg-retro');
+    if (gameState === 'playing' || gameState === 'gameover') {
+        body.classList.add(config.bgGame);
+    } else {
+        body.classList.add(config.bgMenu);
+    }
 }
 
 function toggleFullScreen() {
@@ -178,10 +194,7 @@ function clearScreenEffect() {
 
 function startGame() {
     const nameInput = document.getElementById('player-name').value.trim();
-    if(!nameInput) { 
-        showCustomAlert("Peringatan", "Mohon masukkan nama pemain!"); 
-        return; 
-    }
+    if(!nameInput) { showCustomAlert("Peringatan", "Mohon masukkan nama pemain!"); return; }
     config.playerName = nameInput;
 
     closeNameModal();
@@ -191,20 +204,13 @@ function startGame() {
     // Reset Vars
     score = 0; lives = 3; shapes = []; particles = []; mousePath = [];
     shapesDestroyed = 0; timeElapsed = 0; gameState = 'playing';
-    
-    // Effect Reset
     scoreMultiplier = 1; multiplierTimer = 0; globalSpeed = 1.0;
     slowMoTimer = 0; immunityTimer = 0; fxTimer = 0;
-    
-    // NEW EFFECT RESET
-    fastModeTimer = 0; 
-    blurTimer = 0;
+    fastModeTimer = 0; blurTimer = 0;
     document.body.classList.remove('blur-effect');
-    
-    // Boss Reset
     bossSpawned = false; bossActive = false;
     document.getElementById('boss-warning').style.display = 'none';
-
+    
     if(gameMode === 'time_trial') {
         timeRemaining = config.timerDuration * 60;
         document.getElementById('hud-target').style.display = 'none';
@@ -215,30 +221,27 @@ function startGame() {
 
     clearScreenEffect();
     updateHUD();
+    
+    applyBackground(); // <-- Tambahan: Ganti BG ke mode Game
+    
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
 }
 // FEATURE 1: ABORT GAME
 function abortGame() {
-    // PAUSE GAME LOGIC SEMENTARA (Opsional, tapi disarankan)
-    // Karena modal custom tidak menghentikan loop game secara otomatis seperti alert bawaan
     const prevSpeed = globalSpeed;
     globalSpeed = 0; 
-
     showCustomConfirm(
         "Keluar Permainan?", 
-        "Yakin ingin keluar? Skor tidak akan disimpan.", 
+        "Yakin ingin keluar?", 
         () => {
-            // Aksi YA
             gameState = 'menu';
             clearScreenEffect();
             showMainMenu();
-            globalSpeed = 1.0; // Reset speed
+            globalSpeed = 1.0; 
+            applyBackground(); // <-- Balik ke BG Menu
         },
-        () => {
-            // Aksi BATAL
-            globalSpeed = prevSpeed; // Resume speed
-        }
+        () => { globalSpeed = prevSpeed; }
     );
 }
 
@@ -537,4 +540,10 @@ window.addEventListener('touchmove', (e) => {
     if(isMouseDown && gameState === 'playing') { e.preventDefault(); const touch = e.touches[0]; addInputPoint(touch.clientX, touch.clientY); }
 }, {passive: false});
 
-loadData();
+window.onload = () => {
+    document.getElementById('cfg-bg-menu').value = config.bgMenu;
+    document.getElementById('cfg-bg-game').value = config.bgGame;
+    applyBackground();
+    loadData();
+    resizeCanvas();
+};

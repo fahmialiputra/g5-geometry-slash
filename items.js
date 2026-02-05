@@ -1,19 +1,20 @@
 /**
  * items.js
- * Berisi konfigurasi item, logika gambar (fallback), efek, dan path aset.
+ * Konfigurasi item, logika gambar, dan efek.
  */
 
 const ItemConfig = {
-    // --- ORIGINAL ITEMS ---
     'normal': {
         weight: 80,
         imgSrc: 'assets/item_normal.png',
         color: (s) => `hsl(${Math.random()*360}, 70%, 50%)`,
         draw: (ctx, s) => {
-            if (!s.subType) s.subType = Math.floor(Math.random() * 3);
+            if (s.subType === undefined) s.subType = Math.floor(Math.random() * 3);
             if (s.subType === 0) ctx.rect(-s.size/2, -s.size/2, s.size, s.size);
-            else if (s.subType === 1) { ctx.moveTo(0, -s.size/2); ctx.lineTo(s.size/2, s.size/2); ctx.lineTo(-s.size/2, s.size/2); }
+            else if (s.subType === 1) { ctx.moveTo(0, -s.size/2); ctx.lineTo(s.size/2, s.size/2); ctx.lineTo(-s.size/2, s.size/2); ctx.closePath(); }
             else ctx.arc(0, 0, s.size/2, 0, Math.PI*2);
+            ctx.fill(); 
+            ctx.stroke();
         },
         effect: (game) => {
             game.addScore(10);
@@ -94,10 +95,6 @@ const ItemConfig = {
             game.triggerScreenEffect('#ff0055');
         }
     },
-
-    // --- NEW ITEMS (Custom Requested) ---
-    
-    // a. Bola Emas (+100 Skor)
     'gold_ball': {
         weight: 3,
         imgSrc: 'assets/item_gold.png',
@@ -111,8 +108,6 @@ const ItemConfig = {
             game.triggerScreenEffect('rgba(255, 215, 0, 0.5)');
         }
     },
-
-    // b. Bola Hitam (-100 Skor)
     'black_ball': {
         weight: 3,
         imgSrc: 'assets/item_black.png',
@@ -127,8 +122,6 @@ const ItemConfig = {
             game.triggerScreenEffect('rgba(0, 0, 0, 0.8)');
         }
     },
-
-    // c. Bentuk "-" (-150 Skor)
     'minus_shape': {
         weight: 3,
         imgSrc: 'assets/item_minus.png',
@@ -142,8 +135,6 @@ const ItemConfig = {
             game.triggerScreenEffect('rgba(255, 0, 0, 0.5)');
         }
     },
-
-    // d. Combo (Pertahankan Combo 10s)
     'combo_lock': {
         weight: 2,
         imgSrc: 'assets/item_combo.png',
@@ -161,8 +152,6 @@ const ItemConfig = {
             game.triggerScreenEffect('#ff00ff');
         }
     },
-
-    // e. Bola Duri Jahat (Speed Up 10s)
     'evil_spike': {
         weight: 3,
         imgSrc: 'assets/item_spike.png',
@@ -179,7 +168,6 @@ const ItemConfig = {
                 ctx.lineTo(Math.cos(angle+0.4)*rIn, Math.sin(angle+0.4)*rIn);
             }
             ctx.closePath(); ctx.fill(); ctx.stroke();
-            // Mata jahat
             ctx.fillStyle = "yellow"; 
             ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-5, 5); ctx.lineTo(-15, 5); ctx.fill();
             ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(15, 5); ctx.lineTo(5, 5); ctx.fill();
@@ -189,8 +177,6 @@ const ItemConfig = {
             game.triggerScreenEffect('red');
         }
     },
-
-    // f. Cipratan (Blur Layar 10s)
     'splash_blur': {
         weight: 3,
         imgSrc: 'assets/item_splash.png',
@@ -208,8 +194,6 @@ const ItemConfig = {
             document.body.classList.add('blur-effect');
         }
     },
-
-    // g. Perkalian/Pembagian
     'math_op': {
         weight: 3,
         imgSrc: 'assets/item_math.png',
@@ -231,8 +215,6 @@ const ItemConfig = {
             }
         }
     },
-
-    // h. Donut Hijau (Hapus Debuff)
     'cleanse_donut': {
         weight: 2,
         imgSrc: 'assets/item_cleanse.png',
@@ -250,8 +232,6 @@ const ItemConfig = {
             game.triggerScreenEffect('#ffffff');
         }
     },
-
-    // i. Petir Ungu (Hapus Buff)
     'purge_lightning': {
         weight: 2,
         imgSrc: 'assets/item_purge.png',
@@ -271,14 +251,11 @@ const ItemConfig = {
             game.triggerScreenEffect('#4b0082');
         }
     },
-
-    // --- BOSS ---
     'boss': {
         weight: 0,
         imgSrc: 'assets/item_boss.png',
         color: 'gold',
         draw: (ctx, s) => {
-             // Fallback draw boss
              const spikes = 5;
              const outerRadius = s.size / 2;
              const innerRadius = s.size / 4;
@@ -306,27 +283,21 @@ const ItemConfig = {
     }
 };
 
-// --- PRELOAD ASSETS LOGIC ---
-// Script ini akan berjalan saat file items.js dimuat
 (function preloadAssets() {
     for (const key in ItemConfig) {
         const item = ItemConfig[key];
         if (item.imgSrc) {
             item.imgObj = new Image();
             item.imgObj.src = item.imgSrc;
-            // Kita tidak perlu menunggu onload karena draw() akan mengecek 'complete'
         }
     }
 })();
 
-// Helper untuk memilih item random
 function getRandomItemType(gameMode) {
     let keys = Object.keys(ItemConfig);
-    keys = keys.filter(k => k !== 'boss'); // Boss tidak random
-
+    keys = keys.filter(k => k !== 'boss'); 
     let totalWeight = 0;
     keys.forEach(k => totalWeight += ItemConfig[k].weight);
-
     let random = Math.random() * totalWeight;
     for(let k of keys) {
         if (random < ItemConfig[k].weight) return k;

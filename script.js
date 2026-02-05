@@ -2,9 +2,12 @@
 const config = {
     difficulty: 2,
     timerDuration: 5,
-    targetShapes: 50, // DEFAULT BARU (sesuai range min)
-    playerName: "Player"
+    targetShapes: 50,
+    playerName: "Player",
+    bgMenu: "bg-default", // Default Baru
+    bgGame: "bg-grid"     // Default Baru
 };
+const activeToasts = {};
 
 // New Logic Variables
 let fastModeTimer = 0; // Untuk Evil Spike
@@ -117,6 +120,64 @@ function showMainMenu() {
     showScreen('screen-menu');
     showLeaderboard('time_trial');
     clearScreenEffect();
+    applyBackground();
+}
+
+function showGameToast(id, label, type, durationSeconds = 0) {
+    const container = document.getElementById('toast-container');
+    
+    // 1. Jika toast dengan ID ini sudah ada (misal ambil item yang sama), hapus dulu biar reset
+    if (activeToasts[id]) {
+        const existing = document.getElementById(activeToasts[id]);
+        if (existing) existing.remove();
+        clearTimeout(activeToasts[id + '_timeout']);
+    }
+
+    // 2. Buat Elemen Toast Baru
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+    toast.id = `toast-${id}-${Date.now()}`; // ID unik DOM
+    
+    // Simpan referensi ID DOM ke map activeToasts
+    activeToasts[id] = toast.id;
+
+    // Struktur HTML Toast
+    // Jika ada durasi, kita pakai progress bar. Jika tidak, class blink.
+    const blinkClass = durationSeconds > 0 ? '' : 'blink-anim';
+    
+    let html = `<span class="toast-label ${blinkClass}">${label}</span>`;
+    if (durationSeconds > 0) {
+        html += `<div class="toast-progress" style="transition: width ${durationSeconds}s linear; width: 100%;"></div>`;
+    }
+    toast.innerHTML = html;
+    
+    container.appendChild(toast);
+
+    // 3. Trigger Animasi Progress Bar
+    if (durationSeconds > 0) {
+        // Force reflow agar transisi CSS jalan (trik browser)
+        toast.offsetHeight; 
+        
+        // Set width ke 0 agar menyusut sesuai durasi transition CSS
+        const bar = toast.querySelector('.toast-progress');
+        if(bar) bar.style.width = '0%';
+        
+        // Hapus toast setelah durasi habis
+        const timeout = setTimeout(() => {
+            if(toast.parentNode) toast.remove();
+            delete activeToasts[id];
+        }, durationSeconds * 1000);
+        
+        activeToasts[id + '_timeout'] = timeout;
+    } else {
+        // Logic Item Instan (Blinking 2 detik)
+        const timeout = setTimeout(() => {
+            if(toast.parentNode) toast.remove();
+            delete activeToasts[id];
+        }, 2000);
+        
+        activeToasts[id + '_timeout'] = timeout;
+    }
 }
 
 function toggleSettings() {
@@ -131,6 +192,19 @@ function updateSettingsUI() {
     config.difficulty = parseInt(document.getElementById('cfg-difficulty').value);
     config.timerDuration = parseInt(document.getElementById('cfg-timer').value);
     config.targetShapes = parseInt(document.getElementById('cfg-shape').value);
+    config.bgMenu = document.getElementById('cfg-bg-menu').value;
+    config.bgGame = document.getElementById('cfg-bg-game').value;
+    applyBackground();
+}
+
+function applyBackground() {
+    const body = document.body;
+    body.classList.remove('bg-default', 'bg-grid', 'bg-space', 'bg-retro');
+    if (gameState === 'playing' || gameState === 'gameover') {
+        body.classList.add(config.bgGame);
+    } else {
+        body.classList.add(config.bgMenu);
+    }
 }
 
 function toggleFullScreen() {
@@ -178,10 +252,7 @@ function clearScreenEffect() {
 
 function startGame() {
     const nameInput = document.getElementById('player-name').value.trim();
-    if(!nameInput) { 
-        showCustomAlert("Peringatan", "Mohon masukkan nama pemain!"); 
-        return; 
-    }
+    if(!nameInput) { showCustomAlert("Peringatan", "Mohon masukkan nama pemain!"); return; }
     config.playerName = nameInput;
 
     closeNameModal();
@@ -191,20 +262,17 @@ function startGame() {
     // Reset Vars
     score = 0; lives = 3; shapes = []; particles = []; mousePath = [];
     shapesDestroyed = 0; timeElapsed = 0; gameState = 'playing';
-    
-    // Effect Reset
     scoreMultiplier = 1; multiplierTimer = 0; globalSpeed = 1.0;
     slowMoTimer = 0; immunityTimer = 0; fxTimer = 0;
-    
-    // NEW EFFECT RESET
-    fastModeTimer = 0; 
-    blurTimer = 0;
+    fastModeTimer = 0; blurTimer = 0;
     document.body.classList.remove('blur-effect');
-    
-    // Boss Reset
     bossSpawned = false; bossActive = false;
     document.getElementById('boss-warning').style.display = 'none';
 
+    // Clear Toasts
+    document.getElementById('toast-container').innerHTML = '';
+    for (let key in activeToasts) delete activeToasts[key];
+    
     if(gameMode === 'time_trial') {
         timeRemaining = config.timerDuration * 60;
         document.getElementById('hud-target').style.display = 'none';
@@ -215,30 +283,27 @@ function startGame() {
 
     clearScreenEffect();
     updateHUD();
+    
+    applyBackground(); // <-- Tambahan: Ganti BG ke mode Game
+    
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
 }
 // FEATURE 1: ABORT GAME
 function abortGame() {
-    // PAUSE GAME LOGIC SEMENTARA (Opsional, tapi disarankan)
-    // Karena modal custom tidak menghentikan loop game secara otomatis seperti alert bawaan
     const prevSpeed = globalSpeed;
     globalSpeed = 0; 
-
     showCustomConfirm(
         "Keluar Permainan?", 
-        "Yakin ingin keluar? Skor tidak akan disimpan.", 
+        "Yakin ingin keluar?", 
         () => {
-            // Aksi YA
             gameState = 'menu';
             clearScreenEffect();
             showMainMenu();
-            globalSpeed = 1.0; // Reset speed
+            globalSpeed = 1.0; 
+            applyBackground(); // <-- Balik ke BG Menu
         },
-        () => {
-            // Aksi BATAL
-            globalSpeed = prevSpeed; // Resume speed
-        }
+        () => { globalSpeed = prevSpeed; }
     );
 }
 
@@ -368,7 +433,6 @@ const gameContext = {
     get blurTimer() { return blurTimer; },
     set blurTimer(val) { blurTimer = val; },
     
-    // Vars temp
     shapesDestroyed: 0,
     lastSlashX: 0,
     lastSlashY: 0,
@@ -376,10 +440,9 @@ const gameContext = {
     addScore: addScore,
     triggerScreenEffect: triggerScreenEffect,
     createExplosion: createExplosion,
-    endGame: (win) => { 
-        // Logic win custom jika perlu
-        endGame(); 
-    }
+    endGame: (win) => { endGame(); },
+    
+    showToast: showGameToast 
 };
 
 function handleSlash(x, y) {
@@ -537,4 +600,10 @@ window.addEventListener('touchmove', (e) => {
     if(isMouseDown && gameState === 'playing') { e.preventDefault(); const touch = e.touches[0]; addInputPoint(touch.clientX, touch.clientY); }
 }, {passive: false});
 
-loadData();
+window.onload = () => {
+    document.getElementById('cfg-bg-menu').value = config.bgMenu;
+    document.getElementById('cfg-bg-game').value = config.bgGame;
+    applyBackground();
+    loadData();
+    resizeCanvas();
+};

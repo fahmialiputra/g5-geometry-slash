@@ -48,6 +48,26 @@
     <div id="modal-settings" class="modal hidden">
         <div class="modal-content">
             <h2>Pengaturan</h2>
+            <div style="display:flex; gap:10px; justify-content:space-between; margin-bottom:15px;">
+                <div style="flex:1;">
+                    <label style="font-size:0.9rem;">BG Menu:</label>
+                    <select id="cfg-bg-menu" onchange="updateSettingsUI()" style="width:100%; padding:5px; background:#333; color:white; border:1px solid #555; border-radius:5px;">
+                        <option value="bg-default">Default</option>
+                        <option value="bg-grid">Cyber Grid</option>
+                        <option value="bg-space">Deep Space</option>
+                        <option value="bg-retro">Retro Wave</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.9rem;">BG Game:</label>
+                    <select id="cfg-bg-game" onchange="updateSettingsUI()" style="width:100%; padding:5px; background:#333; color:white; border:1px solid #555; border-radius:5px;">
+                        <option value="bg-default">Default</option>
+                        <option value="bg-grid">Cyber Grid</option>
+                        <option value="bg-space">Deep Space</option>
+                        <option value="bg-retro">Retro Wave</option>
+                    </select>
+                </div>
+            </div>
             <div class="form-group">
                 <label>Tingkat Kesulitan: <span id="val-diff">2</span>⭐</label>
                 <input type="range" id="cfg-difficulty" min="1" max="5" value="2" oninput="updateSettingsUI()">
@@ -90,6 +110,7 @@
             <div id="hud-lives">❤️❤️❤️</div>
             <div id="hud-active-buffs"></div>
         </div>
+        <div id="toast-container"></div>
         <div id="boss-warning">⚠️ FINAL TARGET ⚠️</div>
         <canvas id="gameCanvas"></canvas>
     </div>

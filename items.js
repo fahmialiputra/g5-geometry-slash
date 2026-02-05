@@ -1,71 +1,159 @@
 /**
  * items.js
- * Berisi definisi tipe item, visualisasi (draw), dan logika efeknya (effect).
+ * Konfigurasi item, logika gambar, dan efek.
  */
 
 const ItemConfig = {
-    // --- BASIC SHAPES ---
     'normal': {
-        weight: 100, // Kemungkinan muncul (relatif)
+        weight: 80,
+        imgSrc: 'assets/item_normal.png',
         color: (s) => `hsl(${Math.random()*360}, 70%, 50%)`,
         draw: (ctx, s) => {
-            // Random sub-shape logic dipindah ke sini atau disederhanakan
-            if (!s.subType) s.subType = Math.floor(Math.random() * 3);
+            if (s.subType === undefined) s.subType = Math.floor(Math.random() * 3);
             if (s.subType === 0) ctx.rect(-s.size/2, -s.size/2, s.size, s.size);
-            else if (s.subType === 1) { ctx.moveTo(0, -s.size/2); ctx.lineTo(s.size/2, s.size/2); ctx.lineTo(-s.size/2, s.size/2); }
+            else if (s.subType === 1) { ctx.moveTo(0, -s.size/2); ctx.lineTo(s.size/2, s.size/2); ctx.lineTo(-s.size/2, s.size/2); ctx.closePath(); }
             else ctx.arc(0, 0, s.size/2, 0, Math.PI*2);
+            ctx.fill(); 
+            ctx.stroke();
         },
         effect: (game) => {
             game.addScore(10);
             game.shapesDestroyed++;
         }
     },
-    
-    // --- NEW ITEMS ---
-    
-    // a. Bola Emas (+100 Skor)
-    'gold_ball': {
+    'bomb': {
+        weight: 10,
+        imgSrc: 'assets/item_bomb.png',
+        color: '#333',
+        draw: (ctx, s) => {
+            ctx.fillStyle = '#111'; ctx.arc(0,0, s.size/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = 'red'; ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("X", 0, 0);
+        },
+        effect: (game, s) => {
+            if (game.immunityTimer <= 0) {
+                game.lives--; 
+                game.createExplosion(s.x, s.y, 'red');
+                game.triggerScreenEffect('red');
+                game.showToast('damage', 'TERKENA BOM!', 'debuff'); // Instan
+            } else {
+                game.showToast('block', 'BLOCKED!', 'buff');
+            }
+        }
+    },
+    'score_up': {
         weight: 5,
+        imgSrc: 'assets/item_score.png',
+        color: '#00ff55',
+        draw: (ctx, s) => {
+            ctx.fillStyle = '#0f5'; 
+            ctx.fillRect(-10, -s.size/2, 20, s.size); 
+            ctx.fillRect(-s.size/2, -10, s.size, 20); 
+            ctx.strokeRect(-10, -s.size/2, 20, s.size);
+        },
+        effect: (game) => {
+            game.addScore(50);
+            game.triggerScreenEffect('#00ff55');
+            game.showToast('score', '+50 POINT', 'buff'); // Instan
+        }
+    },
+    'multiplier': {
+        weight: 4,
+        imgSrc: 'assets/item_mult.png',
+        color: '#ffaa00',
+        draw: (ctx, s) => {
+            if(!s.multVal) s.multVal = Math.random() > 0.5 ? 3 : 2;
+            ctx.fillStyle = '#fa0'; ctx.font = "bold 40px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(`x${s.multVal}`, 0, 0); ctx.lineWidth = 1; ctx.strokeText(`x${s.multVal}`, 0, 0);
+        },
+        effect: (game, s) => {
+            game.scoreMultiplier = s.multVal || 2; 
+            game.multiplierTimer = 10;
+            game.triggerScreenEffect('#ffaa00');
+            // DURASI 10 DETIK
+            game.showToast('mult', `MULTIPLIER x${game.scoreMultiplier}`, 'buff', 10);
+        }
+    },
+    'slow_mo': {
+        weight: 3,
+        imgSrc: 'assets/item_slow.png',
+        color: '#00ccff',
+        draw: (ctx, s) => {
+            ctx.fillStyle = '#0cf'; const sides = 6; ctx.moveTo(s.size/2, 0);
+            for (let i = 1; i <= sides; i++) ctx.lineTo(s.size/2 * Math.cos(i * 2 * Math.PI / sides), s.size/2 * Math.sin(i * 2 * Math.PI / sides));
+            ctx.fill(); ctx.stroke(); ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("SLOW", 0, 0);
+        },
+        effect: (game) => {
+            game.slowMoTimer = 5;
+            game.triggerScreenEffect('#00ccff');
+            // DURASI 5 DETIK
+            game.showToast('slow', 'SLOW MOTION', 'info', 5);
+        }
+    },
+    'life': {
+        weight: 2,
+        imgSrc: 'assets/item_life.png',
+        color: '#ff0055',
+        draw: (ctx, s) => {
+            ctx.fillStyle = '#f05'; 
+            ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("❤️", 0, 0);
+        },
+        effect: (game) => {
+            if (game.lives < game.maxLives) {
+                game.lives++;
+                game.showToast('life', 'EXTRA LIFE', 'buff');
+            } else {
+                game.immunityTimer = 10;
+                game.showToast('shield', 'MAX HP: SHIELD', 'buff', 10);
+            }
+            game.triggerScreenEffect('#ff0055');
+        }
+    },
+    'gold_ball': {
+        weight: 3,
+        imgSrc: 'assets/item_gold.png',
         color: '#FFD700',
         draw: (ctx, s) => {
             ctx.arc(0, 0, s.size/2, 0, Math.PI*2);
+            ctx.fillStyle = "gold"; ctx.fill(); ctx.stroke();
         },
         effect: (game) => {
             game.addScore(100);
-            game.triggerScreenEffect('rgba(255, 215, 0, 0.5)'); // Kilau emas
+            game.triggerScreenEffect('rgba(255, 215, 0, 0.5)');
+            game.showToast('gold', 'JACKPOT! +100', 'buff');
         }
     },
-
-    // b. Bola Hitam (-100 Skor)
     'black_ball': {
-        weight: 5,
+        weight: 3,
+        imgSrc: 'assets/item_black.png',
         color: '#000000',
         draw: (ctx, s) => {
             ctx.arc(0, 0, s.size/2, 0, Math.PI*2);
+            ctx.fillStyle = "black"; ctx.fill();
             ctx.strokeStyle = 'red'; ctx.lineWidth = 2; ctx.stroke();
         },
         effect: (game) => {
             game.addScore(-100);
-            game.triggerScreenEffect('rgba(0, 0, 0, 0.8)'); // Gelap
+            game.triggerScreenEffect('rgba(0, 0, 0, 0.8)');
+            game.showToast('black', '-100 POINT', 'debuff');
         }
     },
-
-    // c. Bentuk "-" (-150 Skor)
     'minus_shape': {
-        weight: 4,
+        weight: 3,
+        imgSrc: 'assets/item_minus.png',
         color: '#ff3333',
         draw: (ctx, s) => {
+            ctx.fillStyle = "#ff3333";
             ctx.fillRect(-s.size/2, -s.size/6, s.size, s.size/3);
         },
         effect: (game) => {
             game.addScore(-150);
             game.triggerScreenEffect('rgba(255, 0, 0, 0.5)');
+            game.showToast('minus', '-150 POINT', 'debuff');
         }
     },
-
-    // d. Combo (Pertahankan Combo 10s)
     'combo_lock': {
-        weight: 3,
+        weight: 2,
+        imgSrc: 'assets/item_combo.png',
         color: '#ff00ff',
         draw: (ctx, s) => {
             ctx.font = "bold 30px Arial"; ctx.fillStyle = "white"; 
@@ -75,19 +163,19 @@ const ItemConfig = {
             ctx.beginPath(); ctx.arc(0,0, s.size/2, 0, Math.PI*2); ctx.stroke();
         },
         effect: (game) => {
-            game.multiplierTimer = 10; // Reset timer multiplier
-            // Jika belum ada multiplier, kasih x2 default
+            game.multiplierTimer = 10;
             if(game.scoreMultiplier === 1) game.scoreMultiplier = 2;
             game.triggerScreenEffect('#ff00ff');
+            game.showToast('combo', 'COMBO LOCK', 'buff', 10);
         }
     },
-
-    // e. Bola Duri Jahat (Speed Up 10s) - DEBUFF
     'evil_spike': {
-        weight: 4,
+        weight: 3,
+        imgSrc: 'assets/item_spike.png',
         color: '#800000',
         draw: (ctx, s) => {
             const spikes = 8;
+            ctx.fillStyle = "#800000";
             ctx.beginPath();
             for(let i=0; i<spikes; i++) {
                 const angle = (Math.PI*2 * i)/spikes;
@@ -96,38 +184,38 @@ const ItemConfig = {
                 ctx.lineTo(Math.cos(angle)*rOut, Math.sin(angle)*rOut);
                 ctx.lineTo(Math.cos(angle+0.4)*rIn, Math.sin(angle+0.4)*rIn);
             }
-            ctx.closePath(); ctx.fill();
-            // Mata jahat
+            ctx.closePath(); ctx.fill(); ctx.stroke();
             ctx.fillStyle = "yellow"; 
             ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(-5, 5); ctx.lineTo(-15, 5); ctx.fill();
             ctx.beginPath(); ctx.moveTo(10, -5); ctx.lineTo(15, 5); ctx.lineTo(5, 5); ctx.fill();
         },
         effect: (game) => {
-            game.fastModeTimer = 10; // State baru di game
+            game.fastModeTimer = 10;
             game.triggerScreenEffect('red');
+            game.showToast('speed', 'SPEED UP!', 'debuff', 10);
         }
     },
-
-    // f. Cipratan (Blur Layar 10s) - DEBUFF
     'splash_blur': {
-        weight: 4,
+        weight: 3,
+        imgSrc: 'assets/item_splash.png',
         color: '#888888',
         draw: (ctx, s) => {
+            ctx.fillStyle = "gray";
             ctx.beginPath();
             ctx.moveTo(0, -s.size/2);
             ctx.bezierCurveTo(s.size, -s.size, s.size, s.size, 0, s.size/2);
             ctx.bezierCurveTo(-s.size, s.size, -s.size, -s.size, 0, -s.size/2);
-            ctx.fill();
+            ctx.fill(); ctx.stroke();
         },
         effect: (game) => {
-            game.blurTimer = 10; // State baru
-            document.body.classList.add('blur-effect'); // CSS class baru
+            game.blurTimer = 10;
+            document.body.classList.add('blur-effect');
+            game.showToast('blur', 'VISION BLUR', 'debuff', 10);
         }
     },
-
-    // g. Perkalian/Pembagian (x2 atau /2 Total Skor)
     'math_op': {
         weight: 3,
+        imgSrc: 'assets/item_math.png',
         color: '#3366ff',
         draw: (ctx, s) => {
             if(!s.op) s.op = Math.random() > 0.5 ? 'mul' : 'div';
@@ -140,36 +228,37 @@ const ItemConfig = {
             if (s.op === 'mul') {
                 game.score *= 2;
                 game.triggerScreenEffect('#00ff00');
+                game.showToast('math_good', 'TOTAL SCORE x2', 'buff');
             } else {
                 game.score = Math.floor(game.score / 2);
                 game.triggerScreenEffect('#ff0000');
+                game.showToast('math_bad', 'TOTAL SCORE /2', 'debuff');
             }
         }
     },
-
-    // h. Donut Hijau (Hapus Debuff)
     'cleanse_donut': {
-        weight: 3,
+        weight: 2,
+        imgSrc: 'assets/item_cleanse.png',
         color: '#00ff00',
         draw: (ctx, s) => {
             ctx.lineWidth = 5; ctx.strokeStyle = "#00ff00";
             ctx.shadowColor = "#00ff00"; ctx.shadowBlur = 15;
             ctx.beginPath(); ctx.arc(0,0, s.size/2 - 5, 0, Math.PI*2); ctx.stroke();
-            ctx.shadowBlur = 0; // Reset
+            ctx.shadowBlur = 0;
         },
+        // ...
         effect: (game) => {
-            // Hapus efek negatif
             game.fastModeTimer = 0;
             game.blurTimer = 0;
             document.body.classList.remove('blur-effect');
             game.triggerScreenEffect('#ffffff');
+            game.showToast('cleanse', 'DEBUFF REMOVED', 'buff');
         }
     },
-
-    // i. Petir Ungu (Hapus Buff) - DEBUFF
     'purge_lightning': {
-        weight: 3,
-        color: '#800080', // Ungu
+        weight: 2,
+        imgSrc: 'assets/item_purge.png',
+        color: '#800080',
         draw: (ctx, s) => {
             ctx.shadowColor = "#000"; ctx.shadowBlur = 5;
             ctx.beginPath();
@@ -178,71 +267,62 @@ const ItemConfig = {
             ctx.shadowBlur = 0;
         },
         effect: (game) => {
-            // Hapus efek positif
             game.scoreMultiplier = 1;
             game.multiplierTimer = 0;
             game.immunityTimer = 0;
             game.slowMoTimer = 0;
             game.triggerScreenEffect('#4b0082');
-        }
-    },
-    
-    // --- EXISTING ITEMS (Re-implemented) ---
-    'bomb': {
-        weight: 10,
-        color: '#333',
-        draw: (ctx, s) => {
-            ctx.fillStyle = '#111'; ctx.arc(0,0, s.size/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-            ctx.fillStyle = 'red'; ctx.font = "bold 20px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("X", 0, 0);
-        },
-        effect: (game) => {
-            if (game.immunityTimer <= 0) {
-                game.lives--; 
-                game.createExplosion(game.lastSlashX, game.lastSlashY, 'red');
-                game.triggerScreenEffect('red');
-            }
-        }
-    },
-    'life': {
-        weight: 2,
-        color: '#ff0055',
-        draw: (ctx, s) => {
-            ctx.fillStyle = '#f05'; 
-            // Simple heart
-            ctx.font = "40px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("❤️", 0, 0);
-        },
-        effect: (game) => {
-            if (game.lives < game.maxLives) game.lives++;
-            else game.immunityTimer = 10;
-            game.triggerScreenEffect('#ff0055');
+            game.showToast('purge', 'BUFFS PURGED', 'debuff');
         }
     },
     'boss': {
-        weight: 0, // Tidak spawn random
+        weight: 0,
+        imgSrc: 'assets/item_boss.png',
         color: 'gold',
         draw: (ctx, s) => {
-           // Boss Logic Draw (sama seperti sebelumnya tapi disederhanakan di sini jika mau)
-           // Untuk sekarang kita biarkan logic boss khusus di script utama atau di object.js karena kompleks
+             const spikes = 5;
+             const outerRadius = s.size / 2;
+             const innerRadius = s.size / 4;
+             let rot = Math.PI / 2 * 3;
+             let step = Math.PI / spikes;
+             ctx.beginPath();
+             ctx.moveTo(0, 0 - outerRadius);
+             for (let i = 0; i < spikes; i++) {
+                 ctx.lineTo(Math.cos(rot) * outerRadius, Math.sin(rot) * outerRadius);
+                 rot += step;
+                 ctx.lineTo(Math.cos(rot) * innerRadius, Math.sin(rot) * innerRadius);
+                 rot += step;
+             }
+             ctx.lineTo(0, 0 - outerRadius);
+             ctx.closePath();
+             ctx.fillStyle = ctx.createRadialGradient(0,0,5, 0,0,s.size);
+             ctx.fillStyle.addColorStop(0, "white");
+             ctx.fillStyle.addColorStop(1, "gold");
+             ctx.fill(); ctx.stroke();
         },
         effect: (game) => {
             game.addScore(1000);
-            game.endGame(true); // Win
+            game.showToast('boss', 'BOSS DEFEATED!', 'buff');
+            game.endGame(true);
         }
     }
 };
 
-// Helper untuk memilih item berdasarkan weight
-function getRandomItemType(gameMode) {
-    // Filter item yang tidak relevan (misal 'life' hanya di geo run biasanya, tapi kita buat umum aja seru)
-    let keys = Object.keys(ItemConfig);
-    
-    // Hapus boss dari random pick
-    keys = keys.filter(k => k !== 'boss');
+(function preloadAssets() {
+    for (const key in ItemConfig) {
+        const item = ItemConfig[key];
+        if (item.imgSrc) {
+            item.imgObj = new Image();
+            item.imgObj.src = item.imgSrc;
+        }
+    }
+})();
 
-    // Hitung total weight
+function getRandomItemType(gameMode) {
+    let keys = Object.keys(ItemConfig);
+    keys = keys.filter(k => k !== 'boss'); 
     let totalWeight = 0;
     keys.forEach(k => totalWeight += ItemConfig[k].weight);
-
     let random = Math.random() * totalWeight;
     for(let k of keys) {
         if (random < ItemConfig[k].weight) return k;

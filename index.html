@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Slash v3.0</title>
+    <title>Geometry Slash v3.1 - Multiplayer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div id="screen-fx"></div>
-
     <div class="header-controls">
         <button class="icon-btn" onclick="toggleSettings()">⚙️</button>
         <button class="icon-btn" onclick="toggleFullScreen()">⛶</button>
@@ -17,85 +14,131 @@
 
     <div id="screen-title" class="screen" onclick="showMainMenu()">
         <h1>Geometry<br><span style="color:var(--secondary)">Slash</span></h1>
-        <p style="animation: pulse 1s infinite">Ketuk Layar Untuk Mulai</p>
+        <p class="pulse-text">Ketuk Layar Untuk Mulai</p>
     </div>
 
     <div id="screen-menu" class="screen hidden">
         <h1>Menu Utama</h1>
-        <button class="btn" onclick="prepareGame('time_trial')">Time Trial</button>
-        <button class="btn" onclick="prepareGame('geometry_run')">Geometry Run</button>
+        <div class="menu-buttons">
+            <button class="btn" onclick="openMultiplayerSetup('time_trial')">Time Trial</button>
+            <button class="btn" onclick="openMultiplayerSetup('geometry_run')">Geometry Run</button>
+        </div>
         
         <div class="leaderboard-container">
-            <h3>🏆 Leaderboard Top 3</h3>
-            <div style="display:flex; justify-content:space-around;">
-                <button class="btn-small" onclick="showLeaderboard('time_trial')">Time Trial</button>
-                <button class="btn-small" onclick="showLeaderboard('geometry_run')">Geo Run</button>
+            <div class="leaderboard-header">
+                <h3>🏆 Top 
+                    <select id="lb-limit" onchange="showLeaderboard(currentLbMode)" class="modern-select">
+                        <option value="20">20</option>
+                        <option value="40">40</option>
+                        <option value="60">60</option>
+                        <option value="80">80</option>
+                        <option value="100">100</option>
+                    </select>
+                </h3>
+                <div class="leaderboard-tabs">
+                    <button class="btn-small btn-confirm" id="tab-tt" onclick="showLeaderboard('time_trial')">Time Trial</button>
+                    <button class="btn-small btn-confirm" id="tab-gr" onclick="showLeaderboard('geometry_run')">Geo Run</button>
+                </div>
             </div>
-            <table id="mini-leaderboard"></table>
+            <div class="table-scroll">
+                <table id="mini-leaderboard"></table>
+            </div>
         </div>
     </div>
 
-    <div id="modal-name" class="modal hidden">
-        <div class="modal-content">
-            <h2>Masukkan Nama</h2>
-            <input type="text" id="player-name" placeholder="Nama Pemain" maxlength="10">
-            <br><br>
-            <button class="btn" onclick="startGame()">MULAI!</button>
-            <button class="btn btn-small" style="background:transparent; border:none; color: #888;" onclick="closeNameModal()">Batal</button>
+    <div id="modal-setup" class="modal hidden">
+        <div class="modal-content compact">
+            <h2>Setup Pemain</h2>
+            <div class="player-count-selector">
+                <button type="button" class="btn-count active" onclick="setPlayerCount(1)">1P</button>
+                <button type="button" class="btn-count" onclick="setPlayerCount(2)">2P</button>
+                <button type="button" class="btn-count" onclick="setPlayerCount(3)">3P</button>
+                <button type="button" class="btn-count" onclick="setPlayerCount(4)">4P</button>
+            </div>
+            <input type="hidden" id="num-players" value="1">
+            
+            <div id="player-inputs-container" class="scrollable-list">
+                </div>
+            
+            <div class="modal-actions">
+                <button class="btn btn-confirm" style="flex: 2;" onclick="startGame()">Mulai</button>
+                <button class="btn btn-cancel" style="flex: 1;" onclick="closeSetupModal()">Batal</button>
+            </div>
         </div>
     </div>
 
     <div id="modal-settings" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content compact">
             <h2>Pengaturan</h2>
-            <div style="display:flex; gap:10px; justify-content:space-between; margin-bottom:15px;">
-                <div style="flex:1;">
-                    <label style="font-size:0.9rem;">BG Menu:</label>
-                    <select id="cfg-bg-menu" onchange="updateSettingsUI()" style="width:100%; padding:5px; background:#333; color:white; border:1px solid #555; border-radius:5px;">
+            
+            <div class="settings-grid">
+                <div class="form-group full-width text-center">
+                    <label>Kesulitan: <span id="val-diff-label" class="text-warning">Normal</span></label>
+                    <div id="star-rating" class="star-rating">
+                        <span class="star" onclick="setDifficulty(1)">★</span>
+                        <span class="star" onclick="setDifficulty(2)">★</span>
+                        <span class="star" onclick="setDifficulty(3)">★</span>
+                        <span class="star" onclick="setDifficulty(4)">★</span>
+                        <span class="star" onclick="setDifficulty(5)">★</span>
+                    </div>
+                    <input type="hidden" id="cfg-difficulty" value="2">
+                </div>
+
+                <div class="form-group">
+                    <label>BG Menu:</label>
+                    <select id="cfg-bg-menu" onchange="updateSettingsUI()" class="modern-input">
                         <option value="bg-default">Default</option>
-                        <option value="bg-grid">Cyber Grid</option>
-                        <option value="bg-space">Deep Space</option>
-                        <option value="bg-retro">Retro Wave</option>
+                        <option value="bg-grid">Cyber</option>
+                        <option value="bg-space">Space</option>
+                        <option value="bg-retro">Retro</option>
                     </select>
                 </div>
-                <div style="flex:1;">
-                    <label style="font-size:0.9rem;">BG Game:</label>
-                    <select id="cfg-bg-game" onchange="updateSettingsUI()" style="width:100%; padding:5px; background:#333; color:white; border:1px solid #555; border-radius:5px;">
+                <div class="form-group">
+                    <label>BG Game:</label>
+                    <select id="cfg-bg-game" onchange="updateSettingsUI()" class="modern-input">
                         <option value="bg-default">Default</option>
-                        <option value="bg-grid">Cyber Grid</option>
-                        <option value="bg-space">Deep Space</option>
-                        <option value="bg-retro">Retro Wave</option>
+                        <option value="bg-grid" selected>Cyber</option>
+                        <option value="bg-space">Space</option>
+                        <option value="bg-retro">Retro</option>
                     </select>
                 </div>
+                
+                <div class="form-group">
+                    <label>Time Trial (Menit):</label>
+                    <div class="stepper-control">
+                        <button class="step-btn" onclick="adjTimer(-1)">-</button>
+                        <span id="val-time" class="step-val">5</span>
+                        <button class="step-btn" onclick="adjTimer(1)">+</button>
+                    </div>
+                    <input type="hidden" id="cfg-timer" value="5">
+                </div>
+                
+                <div class="form-group">
+                    <label>Target Geo Run:</label>
+                    <div class="stepper-control">
+                        <button class="step-btn" onclick="adjTarget(-50)">-</button>
+                        <span id="val-shape" class="step-val">50</span>
+                        <button class="step-btn" onclick="adjTarget(50)">+</button>
+                    </div>
+                    <input type="hidden" id="cfg-shape" value="50">
+                </div>
             </div>
-            <div class="form-group">
-                <label>Tingkat Kesulitan: <span id="val-diff">2</span>⭐</label>
-                <input type="range" id="cfg-difficulty" min="1" max="5" value="2" oninput="updateSettingsUI()">
+            
+            <div class="data-actions">
+                <button class="btn-small" onclick="exportData()">⬇ Export</button>
+                <button class="btn-small" onclick="importData()">⬆ Import</button>
+                <button class="btn-small btn-danger" onclick="resetData()">🗑 Reset</button>
             </div>
-            <div class="form-group">
-                <label>Timer Time Trial (Menit): <span id="val-time">5</span></label>
-                <input type="range" id="cfg-timer" min="1" max="15" value="5" oninput="updateSettingsUI()">
-            </div>
-            <div class="form-group">
-                <label>Target Shape (Geo Run): <span id="val-shape">50</span></label>
-                <input type="range" id="cfg-shape" min="50" max="500" value="50" oninput="updateSettingsUI()">
-            </div>
-            <hr style="border-color:#444">
-            <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:center;">
-                <button class="btn-small" onclick="exportData()">Eksport Data</button>
-                <button class="btn-small" onclick="importData()">Import Data</button>
-                <button class="btn-small" style="border-color:red; color:red" onclick="resetData()">Reset Data</button>
-            </div>
-            <br>
-            <button class="btn" onclick="toggleSettings()">Tutup</button>
+            
+            <button class="btn btn-cancel full-width-btn" onclick="toggleSettings()">Tutup</button>
         </div>
     </div>
 
     <div id="screen-gameover" class="screen hidden">
-        <h1 style="color:var(--secondary)">Permainan Selesai!</h1>
+        <h1 style="color:var(--secondary)">Game Over</h1>
         <h2 id="final-score">Skor: 0</h2>
         <p id="final-detail"></p>
-        <button class="btn" onclick="goToMenu()">Kembali ke Menu</button>
+        <button class="btn" onclick="goToMenu()">Menu Utama</button>
     </div>
 
     <div id="game-layer" class="hidden">
@@ -108,20 +151,19 @@
             <div id="hud-timer">Waktu: 00:00</div>
             <div id="hud-target" style="display:none; color: var(--primary)">Target: 0</div>
             <div id="hud-lives">❤️❤️❤️</div>
-            <div id="hud-active-buffs"></div>
         </div>
+        
+        <div id="hud-combo"></div>
         <div id="toast-container"></div>
         <div id="boss-warning">⚠️ FINAL TARGET ⚠️</div>
         <canvas id="gameCanvas"></canvas>
     </div>
 
     <div id="modal-dialog" class="modal hidden">
-        <div class="modal-content" style="border-color: var(--primary); max-width: 400px;">
-            <h2 id="dialog-title" style="margin-top:0">Pesan</h2>
-            <p id="dialog-msg" style="font-size: 1.2rem; margin: 20px 0;">...</p>
-            
-            <div id="dialog-actions" style="display:flex; justify-content:center; gap:10px;">
-                </div>
+        <div class="modal-content compact border-primary">
+            <h3 id="dialog-title" style="margin-top:0">Pesan</h3>
+            <p id="dialog-msg">...</p>
+            <div id="dialog-actions" class="modal-actions"></div>
         </div>
     </div>
 
